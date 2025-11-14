@@ -186,82 +186,73 @@ document.getElementById('next-btn').addEventListener('click', function() {
 updateMenu();
 updateDots();
 
-// ===== GALLERY DRAG FUNCTIONALITY =====
+// ===== GALLERY NAVIGATION (ARROWS) =====
 const gallerySlider = document.querySelector('.gallery-slider');
 const galleryTrack = document.getElementById('gallery-track');
+const galleryPrev = document.getElementById('gallery-prev');
+const galleryNext = document.getElementById('gallery-next');
 
-let isDragging = false;
-let startPos = 0;
-let currentTranslate = 0;
-let prevTranslate = 0;
-let animationID = 0;
+const ANIMATION_DURATION = 28; // seconds, must match CSS
+const STEP_ITEMS = 2; // move 2 items per click
+let stepSeconds = 2; // calculated per layout
+let currentOffsetSeconds = 0;
 
-// Mouse Events
-gallerySlider.addEventListener('mousedown', dragStart);
-gallerySlider.addEventListener('mouseup', dragEnd);
-gallerySlider.addEventListener('mouseleave', dragEnd);
-gallerySlider.addEventListener('mousemove', drag);
+function calculateStepSeconds() {
+    const items = Array.from(document.querySelectorAll('#gallery-track .gallery-item'));
+    if (!items.length) return;
+    const half = Math.floor(items.length / 2);
+    const gapPx = parseFloat(getComputedStyle(galleryTrack).gap) || 0;
 
-// Touch Events
-gallerySlider.addEventListener('touchstart', dragStart);
-gallerySlider.addEventListener('touchend', dragEnd);
-gallerySlider.addEventListener('touchmove', drag);
-
-function dragStart(event) {
-    if (event.type === 'touchstart') {
-        startPos = event.touches[0].clientX;
-    } else {
-        startPos = event.clientX;
-        event.preventDefault();
+    let halfWidth = 0;
+    const itemWidth = items[0].getBoundingClientRect().width;
+    for (let i = 0; i < half; i++) {
+        const w = items[i].getBoundingClientRect().width;
+        halfWidth += w;
+        if (i < half - 1) halfWidth += gapPx;
     }
-    
-    isDragging = true;
-    gallerySlider.classList.add('dragging');
-    
-    // Pause animation
-    galleryTrack.style.animationPlayState = 'paused';
-    
-    animationID = requestAnimationFrame(animation);
+
+    const stepDistance = (itemWidth + gapPx) * STEP_ITEMS;
+    stepSeconds = ANIMATION_DURATION * (stepDistance / halfWidth);
 }
 
-function drag(event) {
-    if (!isDragging) return;
-    
-    const currentPosition = event.type === 'touchmove' 
-        ? event.touches[0].clientX 
-        : event.clientX;
-    
-    currentTranslate = prevTranslate + currentPosition - startPos;
+function applyDelay() {
+    // Normalize to [0, ANIMATION_DURATION)
+    currentOffsetSeconds = ((currentOffsetSeconds % ANIMATION_DURATION) + ANIMATION_DURATION) % ANIMATION_DURATION;
+    galleryTrack.style.animationDelay = `-${currentOffsetSeconds}s`;
 }
 
-function dragEnd() {
-    if (!isDragging) return;
-    
-    isDragging = false;
-    gallerySlider.classList.remove('dragging');
-    
-    cancelAnimationFrame(animationID);
-    
-    prevTranslate = currentTranslate;
-    
-    // Resume animation after a delay
-    setTimeout(() => {
-        galleryTrack.style.animationPlayState = 'running';
-    }, 1000);
-}
+function seekSmooth(direction, durationMs = 350) {
+    const start = currentOffsetSeconds;
+    const end = start + direction * stepSeconds;
+    const startTime = performance.now();
 
-function animation() {
-    if (isDragging) {
-        setSliderPosition();
-        animationID = requestAnimationFrame(animation);
+    function easeInOutCubic(t) {
+        return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
     }
+
+    function step(now) {
+        const p = Math.min(1, (now - startTime) / durationMs);
+        const eased = easeInOutCubic(p);
+        currentOffsetSeconds = start + (end - start) * eased;
+        applyDelay();
+        if (p < 1) requestAnimationFrame(step);
+    }
+
+    requestAnimationFrame(step);
 }
 
-function setSliderPosition() {
-    galleryTrack.style.transform = `translateX(${currentTranslate}px)`;
-}
+// Init
+calculateStepSeconds();
+applyDelay();
 
-// Prevent context menu on gallery
-gallerySlider.addEventListener('contextmenu', (e) => {
-    e.preventDefault();
+// Recalculate on resize (item width changes)
+window.addEventListener('resize', () => {
+    const previousStep = stepSeconds;
+    calculateStepSeconds();
+    // Preserve perceived position by approximating new offset
+    // No special handling needed; animationDelay continues.
 });
+
+// Bind buttons
+if (galleryPrev) galleryPrev.addEventListener('click', () => seekSmooth(-1));
+if (galleryNext) galleryNext.addEventListener('click', () => seekSmooth(1));
