@@ -185,3 +185,83 @@ document.getElementById('next-btn').addEventListener('click', function() {
 // Initialize menu
 updateMenu();
 updateDots();
+
+// ===== GALLERY DRAG FUNCTIONALITY =====
+const gallerySlider = document.querySelector('.gallery-slider');
+const galleryTrack = document.getElementById('gallery-track');
+
+let isDragging = false;
+let startPos = 0;
+let currentTranslate = 0;
+let prevTranslate = 0;
+let animationID = 0;
+
+// Mouse Events
+gallerySlider.addEventListener('mousedown', dragStart);
+gallerySlider.addEventListener('mouseup', dragEnd);
+gallerySlider.addEventListener('mouseleave', dragEnd);
+gallerySlider.addEventListener('mousemove', drag);
+
+// Touch Events
+gallerySlider.addEventListener('touchstart', dragStart);
+gallerySlider.addEventListener('touchend', dragEnd);
+gallerySlider.addEventListener('touchmove', drag);
+
+function dragStart(event) {
+    if (event.type === 'touchstart') {
+        startPos = event.touches[0].clientX;
+    } else {
+        startPos = event.clientX;
+        event.preventDefault();
+    }
+    
+    isDragging = true;
+    gallerySlider.classList.add('dragging');
+    
+    // Pause animation
+    galleryTrack.style.animationPlayState = 'paused';
+    
+    animationID = requestAnimationFrame(animation);
+}
+
+function drag(event) {
+    if (!isDragging) return;
+    
+    const currentPosition = event.type === 'touchmove' 
+        ? event.touches[0].clientX 
+        : event.clientX;
+    
+    currentTranslate = prevTranslate + currentPosition - startPos;
+}
+
+function dragEnd() {
+    if (!isDragging) return;
+    
+    isDragging = false;
+    gallerySlider.classList.remove('dragging');
+    
+    cancelAnimationFrame(animationID);
+    
+    prevTranslate = currentTranslate;
+    
+    // Resume animation after a delay
+    setTimeout(() => {
+        galleryTrack.style.animationPlayState = 'running';
+    }, 1000);
+}
+
+function animation() {
+    if (isDragging) {
+        setSliderPosition();
+        animationID = requestAnimationFrame(animation);
+    }
+}
+
+function setSliderPosition() {
+    galleryTrack.style.transform = `translateX(${currentTranslate}px)`;
+}
+
+// Prevent context menu on gallery
+gallerySlider.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+});
