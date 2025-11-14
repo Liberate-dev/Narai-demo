@@ -192,8 +192,8 @@ const galleryTrack = document.getElementById('gallery-track');
 const galleryPrev = document.getElementById('gallery-prev');
 const galleryNext = document.getElementById('gallery-next');
 
-const ANIMATION_DURATION = 28; // seconds, must match CSS
-const STEP_ITEMS = 2; // move 2 items per click
+const ANIMATION_DURATION = 24; // seconds, must match CSS
+const STEP_ITEMS = 3; // move 3 items per click
 let stepSeconds = 2; // calculated per layout
 let currentOffsetSeconds = 0;
 
@@ -254,5 +254,5 @@ window.addEventListener('resize', () => {
 });
 
 // Bind buttons
-if (galleryPrev) galleryPrev.addEventListener('click', () => seekSmooth(-1));
-if (galleryNext) galleryNext.addEventListener('click', () => seekSmooth(1));
+if (galleryPrev) galleryPrev.addEventListener('click', () => seekSmooth(-1, 450));
+if (galleryNext) galleryNext.addEventListener('click', () => seekSmooth(1, 450));
